@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can the Bot Read You?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#1b1b1b; --paper:#fff4d6; --coral:#ff6b5e; --sun:#ffd23f; --sky:#4cc9f0; --mint:#52d681; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; padding:18px 14px 40px; text-align:center; color:var(--ink);
+    font-family:'Nunito', Arial, sans-serif; font-weight:700;
+    background-color:var(--paper);
+    background-image: radial-gradient(#e8d9a8 1.5px, transparent 1.5px);
+    background-size: 22px 22px;
+  }
+  .card { max-width:440px; margin:0 auto; }
+  .title {
+    display:inline-block; font-family:'Lilita One', Impact, 'Arial Black', sans-serif;
+    font-size:30px; letter-spacing:0.5px; background:var(--sun); border:4px solid var(--ink);
+    border-radius:14px; padding:6px 16px; box-shadow:5px 5px 0 var(--ink);
+    transform:rotate(-2deg); margin:6px 0 10px;
+  }
+  .sub { font-size:14px; margin:6px 0 14px; }
+
+  .scores { display:flex; justify-content:center; gap:10px; margin-bottom:10px; }
+  .tag { border:3px solid var(--ink); border-radius:12px; padding:4px 12px; box-shadow:3px 3px 0 var(--ink); font-size:15px; }
+  .tag b { font-family:'Lilita One', Impact, sans-serif; font-size:22px; margin-left:4px; font-weight:400; }
+  .tag.you { background:var(--mint); } .tag.bot { background:var(--coral); } .tag.tie { background:#e5e7eb; }
+
+  .pips { display:flex; flex-wrap:wrap; justify-content:center; gap:3px; margin:6px auto 12px; max-width:380px; }
+  .pip { width:11px; height:11px; border:2px solid var(--ink); border-radius:3px; background:#fff; }
+  .pip.W { background:var(--mint); } .pip.L { background:var(--coral); } .pip.T { background:#bbb; }
+  .roundtxt { font-size:14px; }
+
+  .stage {
+    background:#fff; border:4px solid var(--ink); border-radius:22px; box-shadow:6px 6px 0 var(--ink);
+    padding:12px 10px 14px; margin:8px 0 14px; transition:background 0.2s;
+  }
+  .stage.win { background:#c9f7d8; } .stage.lose { background:#ffd3ce; } .stage.tie { background:#eeeeee; }
+  .stage.shake { animation: wobble 0.4s; }
+  .botface { font-size:34px; }
+  #stage { font-size:92px; min-height:108px; line-height:108px; }
+  #word { font-family:'Lilita One', Impact, sans-serif; font-weight:400; font-size:26px; min-height:34px; letter-spacing:1px; }
+  #outcome { font-family:'Lilita One', Impact, sans-serif; font-weight:400; font-size:32px; min-height:40px; }
+  .win { color:#14803c; } .lose { color:#c2271b; } .tie { color:#555; }
+  #msg { min-height:24px; font-size:15px; font-style:italic; padding:0 6px; }
+  #read { min-height:24px; font-size:15px; padding:0 6px; margin-top:2px; }
+
+  .btns { display:flex; justify-content:center; gap:12px; margin:6px 0 16px; }
+  .btns button {
+    width:100px; padding:10px 0 8px; font-family:'Lilita One', Impact, sans-serif; font-weight:400; font-size:15px;
+    border:4px solid var(--ink); border-radius:18px; cursor:pointer; color:var(--ink);
+    box-shadow:0 6px 0 var(--ink); transition:transform 0.08s, box-shadow 0.08s;
+  }
+  .btns button .em { display:block; font-size:44px; line-height:1.1; }
+  .btns button:nth-child(1) { background:var(--coral); }
+  .btns button:nth-child(2) { background:var(--sun); }
+  .btns button:nth-child(3) { background:var(--sky); }
+  .btns button:active:not(:disabled) { transform:translateY(5px); box-shadow:0 1px 0 var(--ink); }
+  .btns button:disabled { opacity:0.45; cursor:not-allowed; }
+
+  .histlabel { font-size:13px; margin-bottom:4px; }
+  .ribbon { display:flex; justify-content:center; align-items:center; gap:6px; margin:6px 0 4px; min-height:84px; }
+  .lab { display:flex; flex-direction:column; gap:6px; padding:7px 0; font-family:'Lilita One', Impact, sans-serif; font-weight:400; font-size:12px; }
+  .lab div { height:28px; line-height:28px; }
+  .col { display:flex; flex-direction:column; gap:6px; padding:4px; border-radius:12px; border:3px solid #888; background:#fff; }
+  .col span { width:28px; height:28px; line-height:28px; font-size:20px; }
+  .col.W { border-color:#14b85a; background:#e3fbea; }
+  .col.L { border-color:#e0372b; background:#ffe5e2; }
+  .col.T { border-color:#888; background:#eee; }
+  .col.latest { transform:scale(1.1); box-shadow:3px 3px 0 var(--ink); }
+
+  .fist { display:inline-block; animation: bump 0.35s infinite; }
+  .pop { display:inline-block; animation: pop 0.45s ease-out; }
+  @keyframes bump { 0% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-22px) rotate(-14deg); } 100% { transform: translateY(0) rotate(0deg); } }
+  @keyframes pop { 0% { transform: scale(0.2) rotate(-20deg); opacity:0; } 70% { transform: scale(1.3) rotate(6deg); opacity:1; } 100% { transform: scale(1) rotate(0); } }
+  @keyframes wobble { 0%,100% { transform:translateX(0); } 20% { transform:translateX(-8px); } 40% { transform:translateX(8px); } 60% { transform:translateX(-5px); } 80% { transform:translateX(5px); } }
+
+  .hide { display:none; }
+  .endcard { background:#fff; border:4px solid var(--ink); border-radius:22px; box-shadow:6px 6px 0 var(--ink); padding:18px; margin-top:10px; }
+  .endcard h2 { font-family:'Lilita One', Impact, sans-serif; font-weight:400; font-size:34px; margin:0 0 8px; }
+  .endcard .row { font-size:17px; margin:8px 0; line-height:1.5; }
+  .big { border:4px solid var(--ink); background:var(--mint); border-radius:14px; box-shadow:4px 4px 0 var(--ink);
+         padding:10px 20px; font-family:'Lilita One', Impact, sans-serif; font-size:20px; cursor:pointer; margin-top:8px; }
+  .big:active { transform:translate(3px,3px); box-shadow:1px 1px 0 var(--ink); }
+
+  .small { font-size:13px; }
+  .foot { margin-top:26px; font-size:12px; color:#6b5f3a; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="title">Can the Bot Read You?</div>
+  <p class="sub">30 rounds. Play like you mean it, no button-mashing!</p>
+
+  <div id="game">
+    <div class="scores">
+      <div class="tag you">You<b id="you">0</b></div>
+      <div class="tag bot">Bot<b id="botScore">0</b></div>
+      <div class="tag tie">Ties<b id="ties">0</b></div>
+    </div>
+    <div class="roundtxt">Round <span id="round">1</span> of 30 &nbsp;·&nbsp; Bot has read you <b id="readTxt">0/0</b></div>
+    <div class="pips" id="pips"></div>
+
+    <div class="stage" id="stageBox">
+      <div class="botface">🤖</div>
+      <div id="stage">❔</div>
+      <div id="word"></div>
+      <div id="outcome"></div>
+      <div id="msg"></div>
+      <div id="read"></div>
+    </div>
+
+    <div class="btns">
+      <button onclick="play('R')"><span class="em">🪨</span>ROCK</button>
+      <button onclick="play('P')"><span class="em">📄</span>PAPER</button>
+      <button onclick="play('S')"><span class="em">✂️</span>SCISSORS</button>
+    </div>
+
+    <div class="histlabel">Last rounds: your move on top, bot's below</div>
+    <div class="ribbon" id="ribbon"></div>
+  </div>
+
+  <div id="end" class="endcard hide">
+    <h2>Game over!</h2>
+    <div id="summary" class="row"></div>
+    <button class="big" onclick="newGame()">Play again</button>
+  </div>
+
+  <div class="foot">A class project on predicting human play. Your moves are saved anonymously (no name, no login).</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD6HGnrZMMu6Jso9mU2QBbVVAty7fDPeV4",
+  authDomain: "rps-bot-8c916.firebaseapp.com",
+  projectId: "rps-bot-8c916",
+  storageBucket: "rps-bot-8c916.firebasestorage.app",
+  messagingSenderId: "684454137930",
+  appId: "1:684454137930:web:abf69871152acd9e8b16b3"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Anonymous sign-in: gives each browser its own ID, no login screen
+let uid = null;
+signInAnonymously(auth).then(c => { uid = c.user.uid; }).catch(e => console.error('Auth failed', e));
+
+// Team links end in ?g=team so your own games are tagged separately
+const GROUP = new URLSearchParams(location.search).get('g') === 'team' ? 'team' : 'public';
+
+const MOVES = ['R','P','S'];
+const ICON = {R:'🪨', P:'📄', S:'✂️'};
+const BEATS = {R:'P', P:'S', S:'R'};   // BEATS[x] is the move that beats x
+const TOTAL_ROUNDS = 30;
+const PAUSE_MS = 1400;
+
+// ---------- Smarter bot settings ----------
+const EXPERTS = ['freq', 'recent', 'o1', 'o2', 'o3', 'mr', 'bm'];
+const SHIFTS = [0, 1, 2];        // 0 = repeat pattern, 1 = counter it, 2 = counter the counter
+const SCORE_DECAY = 0.9;         // how fast a pattern's track record fades
+const THRESH = 0.40;             // pattern must beat luck (33%) by this much to be trusted
+const MIN_SAMPLES = 1.5;         // needs about 2 sightings of a situation before guessing
+const COUNT_DECAY = 0.95;        // older habits count less
+
+const SAY_WIN  = ["Okay, you got me.", "Ugh. Lucky.", "Fine. That one's yours.", "I let you have that."];
+const SAY_LOSE = ["Called it.", "Too easy.", "I see you...", "Predictable!"];
+const SAY_TIE  = ["Great minds think alike.", "Mirror match!", "Again?"];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+
+// The bot only learns from THIS player, saved in their own browser
+let T  = JSON.parse(localStorage.getItem('rps3_tables') || '{}');   // T[expert][situation] = [R,P,S] counts
+let SC = JSON.parse(localStorage.getItem('rps3_scores') || '{}');   // SC['o2|1'] = recent success rate
+let gameNo = parseInt(localStorage.getItem('rps3_gameno') || '0', 10);
+
+let sessionId, round, youW, botW, tieN, botMove, botPred, informed,
+    readRight, informedCount, streakLoss, sameRun, hist, locked, roundStart,
+    P, B, R, ctx, preds;
+
+function setButtons(on) {
+  document.querySelectorAll('.btns button').forEach(b => b.disabled = !on);
+}
+function setStageClass(c) {
+  document.getElementById('stageBox').className = 'stage' + (c ? ' ' + c : '');
+}
+
+function newGame() {
+  gameNo++;
+  localStorage.setItem('rps3_gameno', String(gameNo));
+  sessionId = 's' + Math.random().toString(36).slice(2, 10);
+  round = 1; youW = 0; botW = 0; tieN = 0;
+  streakLoss = 0; sameRun = 0;
+  readRight = 0; informedCount = 0; hist = []; locked = false;
+  P = []; B = []; R = [];          // this game's moves: player, bot, results
+  document.getElementById('game').classList.remove('hide');
+  document.getElementById('end').classList.add('hide');
+  document.getElementById('stage').textContent = '❔';
+  document.getElementById('word').textContent = 'Your move!';
+  document.getElementById('outcome').textContent = '';
+  document.getElementById('msg').textContent = '';
+  document.getElementById('read').textContent = '';
+  setStageClass('');
+  updateScore(); renderRibbon(); renderPips();
+  botDecide();               // bot picks BEFORE the player taps
+  setButtons(true);
+  roundStart = Date.now();
+}
+
+// ---------- Bot brain (uses ONLY past rounds, never the current tap) ----------
+function shiftMove(m, k) { for (let i = 0; i < k; i++) m = BEATS[m]; return m; }
+
+function contexts() {
+  const n = P.length, k = {};
+  k.freq = 'all';
+  if (n >= 3) k.recent = 'recent';
+  if (n >= 1) { k.o1 = P[n-1]; k.mr = P[n-1] + R[n-1]; k.bm = B[n-1]; }
+  if (n >= 2) k.o2 = P[n-2] + P[n-1];
+  if (n >= 3) k.o3 = P[n-3] + P[n-2] + P[n-1];
+  return k;
+}
+
+function argmaxCounts(c) {
+  const tot = c[0] + c[1] + c[2];
+  if (tot < MIN_SAMPLES) return null;
+  const mx = Math.max(c[0], c[1], c[2]);
+  const best = [0, 1, 2].filter(i => c[i] >= mx - 1e-9);
+  return MOVES[best[Math.floor(Math.random() * best.length)]];
+}
+
+function computePreds() {
+  const out = {};
+  for (const name of EXPERTS) {
+    if (!(name in ctx)) { out[name] = null; continue; }
+    if (name === 'recent') {
+      const c = [0, 0, 0];
+      P.slice(-8).forEach(m => c[MOVES.indexOf(m)]++);
+      out.recent = argmaxCounts(c);
+    } else {
+      const tab = T[name] && T[name][ctx[name]];
+      out[name] = tab ? argmaxCounts(tab) : null;
+    }
+  }
+  return out;
+}
+
+function botDecide() {
+  ctx = contexts();
+  preds = computePreds();
+  let bestScore = -1, ties = [];
+  for (const name of EXPERTS) {
+    if (!preds[name]) continue;
+    for (const k of SHIFTS) {
+      const s = SC[name + '|' + k] ?? (1 / 3);
+      if (s > bestScore + 1e-9) { bestScore = s; ties = [[name, k]]; }
+      else if (Math.abs(s - bestScore) <= 1e-9) ties.push([name, k]);
+    }
+  }
+  informed = false; botPred = null;
+  if (ties.length && bestScore >= THRESH) {
+    const [name, k] = ties[Math.floor(Math.random() * ties.length)];
+    botPred = shiftMove(preds[name], k);
+    informed = true;
+  }
+  if (!botPred) botPred = MOVES[Math.floor(Math.random() * 3)];
+  botMove = BEATS[botPred];
+}
+
+function learn(p) {
+  // 1) score every pattern on how well it predicted this move
+  for (const name of EXPERTS) {
+    if (!preds[name]) continue;
+    for (const k of SHIFTS) {
+      const key = name + '|' + k;
+      const s = SC[key] ?? (1 / 3);
+      const hit = shiftMove(preds[name], k) === p ? 1 : 0;
+      SC[key] = SCORE_DECAY * s + (1 - SCORE_DECAY) * hit;
+    }
+  }
+  // 2) update the habit tables (older habits fade a little)
+  for (const name of EXPERTS) {
+    if (name === 'recent' || !(name in ctx)) continue;
+    T[name] = T[name] || {};
+    const c = T[name][ctx[name]] || [0, 0, 0];
+    for (let i = 0; i < 3; i++) c[i] *= COUNT_DECAY;
+    c[MOVES.indexOf(p)] += 1;
+    T[name][ctx[name]] = c;
+  }
+  localStorage.setItem('rps3_tables', JSON.stringify(T));
+  localStorage.setItem('rps3_scores', JSON.stringify(SC));
+}
+
+function result(p, b) {
+  if (p === b) return 'T';
+  return BEATS[b] === p ? 'W' : 'L';
+}
+
+function play(p) {
+  if (locked || round > TOTAL_ROUNDS) return;
+  locked = true;
+  const rt = Date.now() - roundStart;      // reaction time in ms
+  setButtons(false);
+  setStageClass('');
+  const words = ['ROCK...', 'PAPER...', 'SCISSORS...', 'SHOOT!'];
+  let i = 0;
+  document.getElementById('stage').innerHTML = '<span class="fist">✊</span>';
+  document.getElementById('word').textContent = words[0];
+  document.getElementById('outcome').textContent = '';
+  document.getElementById('msg').textContent = '';
+  document.getElementById('read').textContent = '';
+  const t = setInterval(() => {
+    i++;
+    if (i < words.length) {
+      document.getElementById('word').textContent = words[i];
+    } else {
+      clearInterval(t);
+      resolveRound(p, rt);
+    }
+  }, 350);
+}
+
+function saveRound(row) {
+  if (!uid) return;   // not signed in (e.g. offline): game still works, round isn't saved
+  addDoc(collection(db, 'rounds'), { uid, group: GROUP, ...row, ts: serverTimestamp() })
+    .catch(e => console.error('Save failed', e));
+}
+
+function resolveRound(p, rt) {
+  const b = botMove;                  // decided before the tap
+  const r = result(p, b);
+  const wasInformed = informed, guess = botPred;
+  const prevMove = P.length ? P[P.length - 1] : '';
+  const prevResult = R.length ? R[R.length - 1] : '';
+  if (r === 'W') youW++; else if (r === 'L') botW++; else tieN++;
+  if (wasInformed) { informedCount++; if (guess === p) readRight++; }
+
+  sameRun = (p === prevMove) ? sameRun + 1 : 1;
+
+  saveRound({
+    session: sessionId, game_no: gameNo, round, player: p, bot: b, result: r,
+    prev_move: prevMove, prev_result: prevResult,
+    informed: wasInformed ? 1 : 0, rt_ms: rt, run_len: sameRun
+  });
+  hist.push({p, b, r});
+
+  learn(p);                           // learn AFTER the round
+  P.push(p); B.push(b); R.push(r);
+
+  streakLoss = (r === 'L') ? streakLoss + 1 : 0;
+
+  document.getElementById('stage').innerHTML = '<span class="pop">' + ICON[b] + '</span>';
+  document.getElementById('word').textContent = 'Bot threw this';
+  const out = document.getElementById('outcome');
+  out.textContent = r === 'W' ? 'YOU WIN!' : r === 'L' ? 'BOT WINS' : 'TIE';
+  out.className = r === 'W' ? 'win' : r === 'L' ? 'lose' : 'tie';
+  setStageClass(r === 'W' ? 'win' : r === 'L' ? 'lose shake' : 'tie');
+
+  document.getElementById('msg').textContent =
+    sameRun >= 5 ? `Same move ${sameRun} times in a row... the bot's catching on!` :
+    streakLoss >= 3 ? `You've lost ${streakLoss} in a row. Time to switch it up?` :
+    '🤖 "' + pick(r === 'W' ? SAY_WIN : r === 'L' ? SAY_LOSE : SAY_TIE) + '"';
+
+  document.getElementById('read').innerHTML = wasInformed
+    ? `🧠 Bot guessed you'd throw ${ICON[guess]} &mdash; ` + (guess === p ? '<span class="lose">it was right!</span>' : '<span class="win">nope, wrong!</span>')
+    : '🧠 Bot is still studying you...';
+
+  round++;
+  updateScore(); renderRibbon(); renderPips();
+  if (round > TOTAL_ROUNDS) return finish();
+  botDecide();
+  setTimeout(() => {
+    locked = false;
+    setButtons(true);
+    roundStart = Date.now();
+  }, PAUSE_MS);
+}
+
+function renderRibbon() {
+  const last = hist.slice(-6);
+  const el = document.getElementById('ribbon');
+  if (!last.length) { el.innerHTML = '<div class="small">Your recent rounds will show up here</div>'; return; }
+  let html = '<div class="lab"><div>YOU</div><div>BOT</div></div>';
+  last.forEach((h, i) => {
+    html += `<div class="col ${h.r}${i === last.length - 1 ? ' latest' : ''}"><span>${ICON[h.p]}</span><span>${ICON[h.b]}</span></div>`;
+  });
+  el.innerHTML = html;
+}
+
+function renderPips() {
+  let html = '';
+  for (let i = 0; i < TOTAL_ROUNDS; i++) {
+    html += `<div class="pip ${hist[i] ? hist[i].r : ''}"></div>`;
+  }
+  document.getElementById('pips').innerHTML = html;
+}
+
+function updateScore() {
+  document.getElementById('round').textContent = Math.min(round, TOTAL_ROUNDS);
+  document.getElementById('you').textContent = youW;
+  document.getElementById('botScore').textContent = botW;
+  document.getElementById('ties').textContent = tieN;
+  document.getElementById('readTxt').textContent = readRight + '/' + informedCount;
+}
+
+function finish() {
+  setTimeout(() => {
+    document.getElementById('game').classList.add('hide');
+    document.getElementById('end').classList.remove('hide');
+    const pct = informedCount ? Math.round(100 * readRight / informedCount) : 0;
+    document.getElementById('summary').innerHTML =
+      `You <b>${youW}</b> &nbsp;|&nbsp; Bot <b>${botW}</b> &nbsp;|&nbsp; Ties <b>${tieN}</b><br>` +
+      `Bot win rate: <b>${Math.round(100 * botW / TOTAL_ROUNDS)}%</b> (pure luck = 33%)<br>` +
+      `The bot read your move <b>${pct}%</b> of the time (${readRight}/${informedCount} real guesses)`;
+  }, 1500);
+}
+
+document.addEventListener('keydown', e => {
+  const k = e.key.toUpperCase();
+  if (['R','P','S'].includes(k) && !document.getElementById('game').classList.contains('hide')) play(k);
+});
+
+// buttons use onclick="...", so expose these to the page
+window.play = play;
+window.newGame = newGame;
+
+newGame();
+</script>
+</body>
+</html>

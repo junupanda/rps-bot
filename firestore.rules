@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /rounds/{id} {
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['uid','group','session','game_no','round','player','bot','result','prev_move','prev_result','informed','rt_ms','run_len','ts'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.group in ['public','team']
+        && request.resource.data.player in ['R','P','S']
+        && request.resource.data.bot in ['R','P','S']
+        && request.resource.data.result in ['W','L','T']
+        && request.resource.data.round is int
+        && request.resource.data.round >= 1
+        && request.resource.data.round <= 30
+        && request.resource.data.ts == request.time;
+      allow read, update, delete: if false;
+    }
+  }
+}
