@@ -1,177 +1,122 @@
-# 🤖 Can the Bot Read You?
+# Can the Bot Read You?
 
-### A rock-paper-scissors experiment on how predictable humans really are
+A rock-paper-scissors experiment on how predictable people are. You play 30 rounds against a bot that tries to learn your habits as you go, and every round is saved anonymously so we can check the results with real data.
 
-![Status](https://img.shields.io/badge/status-data%20collection-orange)
-![Built with](https://img.shields.io/badge/built%20with-JavaScript-yellow)
-![Hosting](https://img.shields.io/badge/hosting-Firebase-ffca28)
-![License](https://img.shields.io/badge/license-MIT-green)
+Play it here: https://rps-bot-8c916.web.app
 
-**▶ Play it live: [rps-bot-8c916.web.app](https://rps-bot-8c916.web.app)**  
-**💻 Source code: [github.com/junupanda/rps-bot](https://github.com/junupanda/rps-bot)**
+This is a group project for QRMT.
 
-A web game where you play 30 rounds of rock-paper-scissors against a bot that tries to learn your habits as you play. Every round is saved anonymously, so we can test a simple question with real data: **does a pattern-learning bot beat the 33% you would get from pure luck?**
+## The question
 
-This is a group project for **QRMT (Quantitative Reasoning and Mathematical Thinking)**.
+If people played rock-paper-scissors randomly, any bot would win about 33% of rounds. So we ask: does a bot that learns from human play do better than 33% against real players, and how many games do we need before we can trust the answer?
 
----
+We also want to check the opposite case. A random number generator playing the same bot should land near 33%, because nothing can predict true randomness.
 
-## 🎯 Objectives
+## What we are trying to show
 
-1. **Test whether humans are predictable.** If people played truly randomly, any bot would win exactly 1/3 of rounds. We measure how far real play deviates from that.
-2. **Find out how many games it takes to be sure.** A short run can look extreme purely by luck. We show how the win rate settles down as the sample grows.
-3. **Check that randomness cannot be beaten.** A random number generator playing the bot should land near 33%, which confirms the bot is not cheating.
-4. **Apply course concepts to real data:** expected value, standard deviation, the normal approximation, Monte Carlo simulation, the Law of Large Numbers, random number generation, and linear regression.
+1. How far real human play is from random.
+2. How much a small sample can mislead. Ten games can look very good or very bad purely by luck, and the win rate settles down as the number of games grows.
+3. That the bot is fair and does not cheat, using the random-generator check.
+4. How course ideas (expected value, standard deviation, the normal approximation, Monte Carlo simulation, the Law of Large Numbers, random number generation and linear regression) apply to a real dataset.
 
-## 🧠 The research question
+## How the game works
 
-> If people played rock-paper-scissors randomly, any bot would win 33% of rounds. Does a bot trained on human play beat 33% against real players, and how many games do we need before we can trust the result?
+You pick rock, paper or scissors. A short countdown plays, then the bot's move is revealed along with who won. The page keeps a running scoreboard, a 30-square progress bar, and a short history of recent rounds (your move on top, the bot's underneath). After each round the bot also shows what it guessed you would throw and whether it was right.
 
----
+The bot chooses its move before you tap, using only earlier rounds, and it learns only after the result is shown. It never sees your current move.
 
-## 🎮 How the game works
+## How the bot works
 
-1. Pick Rock, Paper or Scissors.
-2. A short "Rock... Paper... Scissors... SHOOT!" countdown plays, then the bot's move is revealed.
-3. The scoreboard, a 30-square progress bar, and a strip of your recent rounds (your move on top, the bot's below) show how the game is going.
-4. After each round the bot shows what it guessed you would throw, and whether it was right.
-5. After 30 rounds you see your result and how often the bot read you.
+The bot watches several simple patterns at once and follows whichever has been predicting you best lately. The patterns are:
 
-**Fairness:** the bot chooses its move *before* you tap, using only past rounds. It never sees your current move, and it only learns after the result is revealed.
+- your overall favourite move
+- your last few moves
+- what you usually throw after your previous move
+- what you usually throw after your previous two or three moves
+- how you react to winning, losing or tying
+- how you react to the bot's previous move
 
-## 🔍 How the bot thinks
+For each pattern it also tries two twists: that you will counter it, and that you will counter the counter. This lets it keep up with players who change their play after seeing its guesses. Old habits count for less over time. If no pattern is doing better than luck, the bot plays randomly instead of guessing badly.
 
-The bot runs several small pattern detectors at the same time and follows whichever one has been working best on you recently.
+The bot's memory is kept in each player's own browser, so it only learns from that one person, and everyone starts with the same blank bot. More detail is in `docs/METHODOLOGY.md`.
 
-| Pattern it watches | Example |
+## The maths
+
+For each round, the bot either wins or it does not (ties count as not winning). Under random play the chance of a bot win is 1/3. Over n rounds, the win rate varies from 33% by a standard deviation of sqrt((1/3)(2/3)/n):
+
+| Rounds | Typical swing from 33% |
 |---|---|
-| Overall favorite | "You throw Rock a lot" |
-| Recent streak | "Your last 8 throws lean Paper" |
-| Last move | "After Rock, you usually throw Scissors" |
-| Last two / three moves | "After Rock then Paper, you throw Rock" |
-| Reaction to results | "After a loss, you switch to Paper" |
-| Reaction to the bot's move | "After the bot throws Rock, you throw Paper" |
+| 10 | 14.9 points |
+| 30 | 8.6 points |
+| 100 | 4.7 points |
+| 300 | 2.7 points |
+| 500 | 2.1 points |
 
-For each pattern it also tests three versions: *you will repeat it*, *you will counter it*, and *you will counter the counter*. That is how it catches players who adapt after seeing its guesses. Old habits fade gradually, so it keeps up when you change style. If no pattern is beating luck, it plays randomly instead of guessing badly.
+So a single 30-round game says very little. That is the reason we are collecting games from many people.
 
-Full details are in [docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+## Data we record
 
----
+Each round is stored as one row with no names or personal details:
 
-## 📐 The math behind it
+- an anonymous random player ID
+- whether the player is in the public group or the team group (team members use `?g=team` at the end of the link)
+- the session and game number
+- the round number (1 to 30)
+- the player's move and the bot's move
+- the result (win, loss or tie)
+- the previous move and previous result
+- whether the bot made a real guess or played randomly
+- reaction time in milliseconds
+- how many times in a row the same move was played
+- a server timestamp
 
-Each round is a win or not-a-win for the bot, with a probability of 1/3 under random play (ties count as not-a-win). The win rate over *n* rounds has standard deviation √(⅓ · ⅔ / n), so luck alone moves it by:
+Before analysis we remove sessions that look like button mashing: fewer than 10 rounds, or ten or more identical moves in a row. We report how many were removed. The full rules are in `docs/METHODOLOGY.md`.
 
-| Rounds | Typical swing from 33% (1 SD) |
-|---:|---:|
-| 10 | ± 14.9 points |
-| 30 | ± 8.6 points |
-| 100 | ± 4.7 points |
-| 300 | ± 2.7 points |
-| 500 | ± 2.1 points |
+## Built with
 
-This is why one person's 30-round game cannot tell us much, and why the project needs lots of players.
+- HTML, CSS and JavaScript in a single page, with no framework
+- Firebase Hosting for the site
+- Cloud Firestore for storing rounds
+- Firebase Anonymous Authentication, so no one has to log in
 
----
+## Files
 
-## 🛠 Tech stack
+- `public/index.html`: the game and the bot
+- `docs/METHODOLOGY.md`: bot design, data cleaning rules, analysis plan and limitations
+- `firestore.rules`: security rules, so players can only add correctly formatted rounds and cannot read, change or delete any data
+- `firebase.json` and `.firebaserc`: Firebase configuration
 
-- **Front end:** plain HTML, CSS and JavaScript in a single page (no framework)
-- **Hosting:** Firebase Hosting
-- **Database:** Cloud Firestore
-- **Identity:** Firebase Anonymous Authentication (no names, no logins)
-- **Analysis (planned):** Python or Excel on an exported CSV
+The Firebase config inside `index.html` is meant to be public in web apps. Access to the data is controlled by the rules file. Private keys are never committed.
 
-## 📁 Repository structure
+## Running it yourself
+
+Open `public/index.html` in a browser to see the game. Rounds only save when the page is served from the Firebase project's own domain.
+
+To deploy your own copy, create a Firebase project, turn on Anonymous sign-in and Firestore, publish `firestore.rules`, paste your own config into `public/index.html`, and run:
 
 ```
-rps-bot/
-├── public/
-│   └── index.html        # the whole game and bot
-├── docs/
-│   └── METHODOLOGY.md    # bot design, data cleaning, analysis plan, limitations
-├── firestore.rules       # security rules (players can only add their own rounds)
-├── firebase.json         # Firebase Hosting config
-├── .firebaserc           # Firebase project link
-├── LICENSE
-└── README.md
-```
-
-## 💾 What gets recorded
-
-Each round is saved as one anonymous row:
-
-| Field | Meaning |
-|---|---|
-| `uid` | Anonymous player ID (random, not linked to a name) |
-| `group` | `public` or `team` (team members use `?g=team` in the link) |
-| `session`, `game_no` | Which game, and that player's game number |
-| `round` | Round number, 1 to 30 |
-| `player`, `bot` | Moves played (`R`, `P`, `S`) |
-| `result` | `W` (you won), `L` (bot won), `T` (tie) |
-| `prev_move`, `prev_result` | What happened the round before |
-| `informed` | 1 if the bot made a real guess, 0 if it played randomly |
-| `rt_ms` | Reaction time in milliseconds |
-| `run_len` | How many times in a row the same move was played |
-| `ts` | Server timestamp |
-
-No names, emails, or personal details are collected.
-
-## 🔒 Privacy and security
-
-- Players are identified only by a random anonymous ID.
-- The Firebase config in `public/index.html` is meant to be public in web apps. Access is controlled by [`firestore.rules`](firestore.rules): players can only **add** correctly formatted rounds, and nobody can read, edit or delete data through the website.
-- Private keys and service-account files are never committed (see `.gitignore`).
-
----
-
-## 🚀 Run it yourself
-
-**Play online:** open the live link above.
-
-**Run locally:** open `public/index.html` in a browser. The game works, but rounds will not save unless it is served from a Firebase-authorized domain.
-
-**Deploy your own copy**
-```bash
 npm install -g firebase-tools
 firebase login
-firebase init hosting     # public directory: public, single-page app: No
 firebase deploy --only hosting
 ```
-Then create your own Firebase project, enable Anonymous sign-in and Firestore, publish `firestore.rules`, and paste your own `firebaseConfig` into `public/index.html`.
 
----
+## Results
 
-## 📊 Results
+Data collection is still in progress. This section will be filled in after analysis.
 
-*Data collection is in progress. Results will be added here after analysis.*
+## Limitations
 
-| Measure | Result |
-|---|---|
-| Games played | _TBD_ |
-| Players | _TBD_ |
-| Bot win rate (all players) | _TBD_ |
-| Bot read rate on informed guesses | _TBD_ |
-| Different from 33%? | _TBD_ |
-
-## ⚠️ Limitations
-
-- Players can see the bot's guesses, so some will deliberately adapt to it.
-- Players choose to take part, so the sample is not random.
+- Players can see the bot's guesses, so some will adapt on purpose.
+- People choose whether to play, so the sample is not random.
 - Rounds from the same person are not fully independent.
-- A person's bot memory lives in their browser, so clearing it resets the bot for that person.
-- People who rush or spam buttons are filtered out, using thresholds listed in the methodology.
+- A player who clears their browser data resets the bot's memory for them.
+- The bot is deliberately simple. A different model could do better or worse.
 
-## 👥 Team
+## Team
 
-| Name | Role |
-|---|---|
-| Thakur Garg | Bot, game, data collection |
-| _Name 2_ | _TBD_ |
-| _Name 3_ | _TBD_ |
-| _Name 4_ | _TBD_ |
-| _Name 5_ | _TBD_ |
+- Thakur Garg: game, bot and data collection
+- Other members to be added
 
-## 📄 License
+## License
 
-Released under the [MIT License](LICENSE).
+MIT. See `LICENSE`.
